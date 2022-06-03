@@ -14,14 +14,24 @@ class var(object):
         object.__setattr__(self, name, value)
 v = var()
 from tkinter import *
-from pygments import highlight
-from tkinter import colorchooser
-import subprocess
 from tkinter import ttk, filedialog, messagebox
 from tkcode import CodeEditor
-from customtkinter import CTkEntry, set_appearance_mode, CTkButton, CTkInputDialog, CTkFrame
-import ntpath, platform
+from customtkinter import CTkEntry, set_appearance_mode, CTkButton, CTkInputDialog
+import ntpath, platform, subprocess, sys
+import tkinter as tk
+from ctypes import windll
+GWL_EXSTYLE=-20
+WS_EX_APPWINDOW=0x00040000
+WS_EX_TOOLWINDOW=0x00000080
 set_appearance_mode("light")
+def set_appwindow(root):
+    hwnd = windll.user32.GetParent(root.winfo_id())
+    style = windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+    style = style & ~WS_EX_TOOLWINDOW
+    style = style | WS_EX_APPWINDOW
+    res = windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+    root.wm_withdraw()
+    root.after(9, lambda: root.wm_deiconify())
 v.file_path = ""
 langs = str("Python")
 block_true = str(False)
@@ -44,32 +54,24 @@ terminal_bg_light = str("#4C4C4C")
 ask_yes_text = str("Your file is not saved, and this could result in loss of work, anger, desperssion and rage quiting")
 ask_yes_heading = str("Are you sure you want to open?")
 filenamee = str("Untitled File")
+#tksuper root name "700x500" top_bg
 root = Tk()
 root.title(name)
-root.geometry("700x500")
-root.configure(bg=top_bg)
+root.geometry("825x500")
+root.config(bg=bg)
+root.overrideredirect(True)
+root.after(9, lambda: set_appwindow(root))
+#VARIABLES
+topbar = Frame(bg=top_bg, bd=1)
+menubar = Menu(root)
+root.iconbitmap("Images/logo.ico")
+#root.overiderict()
+def move(event):
+    x, y = root.winfo_pointerxy()
+    root.geometry(f"+{x}+{y}")
+topbar.bind('<B1-Motion>',move)
 terminal = Frame(root, bg=black, width=20)
 root.option_add("*tearOff", 0)
-code_frame = Frame(root, bg=black)
-code_editor = CodeEditor(
-    code_frame,
-    width=20,
-    height=10,
-    language=langs,
-    highlighter=monokai,
-    autofocus=True,
-    blockcursor=block_true,
-    font = (font_family, font_size),
-    insertofftime=0,
-    padx=7,
-    pady=7,
-    bd=2,
-    selectbackground='white',
-    selectforeground='black',
-    startline=1,
-    undo=True,
-    wrap=WORD
-)
 def save_file():
     global curr
     curr = code_editor.get("1.0", "end-1c")
@@ -81,78 +83,6 @@ def save_file():
             e.close()
     except NameError: save_as_file()
     except FileNotFoundError: save_as_file()
-def open_file():
-    if code_editor.get("1.0", "end-1c") != "": real_file_open()
-    else: e_real_file_open()
-topbar = Frame(bg=top_bg, bd=1)
-topbar.pack(side=TOP, fill='x', pady=2, padx=2)
-a_frame = Frame(bg='black', bd=0, height=1)
-a_frame.pack(side=TOP, fill='x')
-def sel_menu():
-    root.config(menu="")
-    menu_btn.config(command=menu_sel)
-def menu_sel():
-    root.config(menu=menubar)
-    menu_btn.config(command=sel_menu)
-    """
-    #* COMING SOON NEXT UPDATE
-    menus = Frame(root, bg=top_bg, bd=0, highlightthickness=0)
-    code_frame.pack_forget()
-    menus.pack(fill="x", side=TOP)
-    code_frame.pack(fill="both", expand=True, pady=10, padx=10)
-    file_lb = Label(menus, text=' File', font=(font_family, font_size), fg=fg, bg=top_bg)
-    file_lb.grid(row=0, column=0)
-    help_lb = Label(menus, text=' Help', font=(font_family, font_size), fg=fg, bg=top_bg)
-    help_lb.grid(row=0, column=1)
-    conf_lb = Label(menus, text=' Configure', font=(font_family, font_size), fg=fg, bg=top_bg)
-    conf_lb.grid(row=0, column=2)
-    themes_lb = Label(menus, text=' Themes/Fonts', font=(font_family, font_size), fg=fg, bg=top_bg)
-    themes_lb.grid(row=0, column=3)
-    """
-def font_sel():
-    set_appearance_mode("dark")
-    fontselector = CTkInputDialog(text="Type a font or theme name (all simple)", title='Font and theme')
-    outs = fontselector.get_input()
-    if outs == "dracula":
-        code_editor.config(highlighter='dracula')
-        terminal_bg = "#292A36"
-        terminal_bg_light = "#636582"
-        xterm.config(bg=terminal_bg)
-        xinput.config(bg=terminal_bg_light)
-    elif outs == "monokai":
-        terminal_bg = "#262626"
-        terminal_bg_light = "#4C4C4C"
-        xterm.config(bg=terminal_bg)
-        xinput.config(bg=terminal_bg_light)
-        code_editor.config(highlighter='monokai')
-    elif outs == "consolas": change_font("Consolas")
-    elif outs == "jetbrains mono": change_font("JetBrains Mono")
-    elif outs == "firacode": change_font("Firacode")
-    elif outs == "monospace": change_font("Monospace")
-    set_appearance_mode("light")
-open_btn = CTkButton(
-    topbar, text="Open", text_font=('Helvetica', font_size),
-    fg_color=bg, text_color=fg, hover_color=bg, command=open_file, border_width=1, border_color=black,
-)
-open_btn.pack(side=LEFT, pady=3, padx=3)
-save_btn = CTkButton(
-    topbar, text="Save", text_font=('Helvetica', font_size),
-    fg_color=bg, text_color=fg, hover_color=bg, command=save_file, border_width=1, border_color=black,
-)
-save_btn.pack(side=LEFT, pady=3, padx=3)
-files_label = Label(topbar, text=filenamee, bg=top_bg, fg=top_fg, font=('Helvetica', font_size))
-files_label.place(relx=0.5, rely=0.5, anchor=CENTER)
-fonts_btn = CTkButton(
-    topbar, text="Fonts", text_font=('Helvetica', font_size),
-    fg_color=bg, text_color=fg, hover_color=bg, command=font_sel, border_width=1, border_color=black,
-)
-fonts_btn.pack(side=RIGHT, pady=3, padx=3)
-menu_btn = CTkButton(
-    topbar, text="Menu", text_font=('Helvetica', font_size),
-    fg_color=bg, text_color=fg, hover_color=bg, command=menu_sel, border_width=1, border_color=black,
-)
-menu_btn.pack(side=RIGHT, pady=3, padx=3)
-menubar = Menu(root)
 def save_as_file():
     save_sa = filedialog.asksaveasfilename(
         initialdir="/",
@@ -198,23 +128,168 @@ def e_real_file_open():
             file_lab.config(text=filenamee)
             file_lab.config(text=filenamee)
             root.title(f"{name} - {filenamee}")
-file_menu = Menu(menubar)
-file_menu.add_command(label="New", command=lambda: code_editor.delete(0.0, END))
-file_menu.add_command(label="Open", command=open_file)
-file_menu.add_command(label="Save", command=save_file)
-file_menu.add_command(label="Save as", command=save_as_file)
-file_menu.add_separator()
-file_menu.add_command(label="Exit")
 def help():
-    messagebox.showinfo("Help", "Go to github.com/ORCIM and ask a question on the disscussion, or email pycodes.10@gmail.com")
+    messagebox.showinfo("Help", "Go to github.com/ORCIM and ask a question on the disscussion, or email pycodes.9@gmail.com")
 def about():
     messagebox.showinfo("About", "Orcim is a Python code editor, it is a free software, and it is open source. It is a decently powerfull Tkinter Code editor.")
 def version():
     messagebox.showinfo("Version", "DEVELOPEMENT ALPHA V.1.0")
-help_menu = Menu(menubar)
-help_menu.add_command(label="Help", command=help)
-help_menu.add_command(label="About", command=about)
-help_menu.add_command(label="Version", command=version)
+def open_file():
+    if code_editor.get("1.0", "end-1c") != "": real_file_open()
+    else: e_real_file_open()
+def rem():
+    root.config(menu="")
+    menu_btn.config(command=menu_sel)
+    print('a')
+def menu_sel():
+    root.config(menu=menubar)
+    menu_btn.config(command=rem)
+    print("ee")
+def menubars():
+    global menubar
+    file_menu = Menu(menubar, activebackground="#94C3FF", activeforeground='black')
+    file_menu.add_command(label="New", command=lambda: code_editor.delete(0.0, END))
+    file_menu.add_command(label="Open", command=open_file)
+    file_menu.add_command(label="Save", command=save_file)
+    file_menu.add_command(label="Save as", command=save_as_file)
+    file_menu.add_separator()
+    file_menu.add_command(label="Exit", command=sys.exit)
+    help_menu = Menu(menubar, activebackground="#94C3FF", activeforeground='black')
+    help_menu.add_command(label="Help", command=help)
+    help_menu.add_command(label="About", command=about)
+    help_menu.add_command(label="Version", command=version)
+    #root.attributes('-alpha', 0.96)
+    lang_menu = Menu(menubar, activebackground="#94C3FF", activeforeground='black')
+    lang_menu.add_command(label="Language Syntax Search", command=lambda: search())
+    file_menu.add_separator()
+    lang_menu.add_command(label="Transparent mode", command=lambda: root.attributes('-alpha', 0.96))
+    lang_menu.add_command(label="Opaque mode", command=lambda: root.attributes('-alpha', 1))
+    file_menu.add_separator()
+    lang_menu.add_command(label="Terminal (OFF)", command=lambda: terminal.pack_forget())
+    lang_menu.add_command(label="Terminal (ON)", command=lambda: terminal.pack(fill='both', side=BOTTOM, pady=7, padx=7))
+    theme_menu = Menu(menubar, activebackground="#94C3FF", activeforeground='black')
+    theme_menu.add_command(label="Monokai", command=lambda: theme_set("monokai"))
+    theme_menu.add_command(label="Dracula", command=lambda: theme_set("dracula"))
+    theme_menu.add_separator()
+    theme_menu.add_command(label="Consolas", command=lambda: change_font("Consolas"))
+    theme_menu.add_command(label="JetBrains Mono", command=lambda: change_font("JetBrains Mono"))
+    theme_menu.add_command(label="Source Code", command=lambda: change_font("Source Code"))
+    theme_menu.add_command(label="Firacode", command=lambda: change_font("Firacode"))
+    theme_menu.add_command(label="Monospace", command=lambda: change_font("Monospace"))
+    menubar.add_cascade(menu=file_menu, label="File", activebackground="#94C3FF", activeforeground='black')
+    menubar.add_cascade(menu=help_menu, label="Help")
+    menubar.add_cascade(menu=lang_menu, label="Configure")
+    menubar.add_cascade(menu=theme_menu, label="Themes/Fonts")
+code_frame = Frame(root, bg=black)
+menubars()
+code_editor = CodeEditor(
+    code_frame,
+    width=20,
+    height=9,
+    language=langs,
+    highlighter=monokai,
+    autofocus=True,
+    blockcursor=block_true,
+    font = (font_family, font_size),
+    insertofftime=0,
+    padx=7,
+    pady=7,
+    bd=2,
+    selectbackground='white',
+    selectforeground='black',
+    startline=1,
+    undo=True,
+    wrap=WORD
+)
+def center(win):
+    """
+    centers a tkinter window
+    :param win: the main window or Toplevel window to center
+    """
+    win.update_idletasks()
+    width = win.winfo_width()
+    frm_width = win.winfo_rootx() - win.winfo_x()
+    win_width = width + 2 * frm_width
+    height = win.winfo_height()
+    titlebar_height = win.winfo_rooty() - win.winfo_y()
+    win_height = height + titlebar_height + frm_width
+    x = win.winfo_screenwidth() // 2 - win_width // 2
+    y = win.winfo_screenheight() // 2 - win_height // 2
+    win.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+    win.deiconify()
+def ee():
+    set_appwindow(root)
+    print("Refreshed windows 11")
+topbar.bind("<Button-3>", lambda event: ee())
+def checkformins():
+    if 'normal' == root.state():
+        root.overrideredirect(True)
+        root.after_cancel(root.after(9, lambda: set_appwindow(root)))
+    elif 'iconic' == root.state(): print("ICONIC")
+    else:
+        root.overrideredirect(True)
+    root.after(1000, checkformins)
+root.after(1000, checkformins)
+def funel_exit():
+    root.state("normal")
+    center(root)
+    root.geometry("825x500")
+    fullscreen_btn.bind("<Button-1>", lambda event: funel())
+def funel():
+    root.overrideredirect(False)
+    root.state('zoomed')
+    root.overrideredirect(True)
+    messagebox.showerror("This feature is not added yet", "This feature is not added yet. Please give me help")
+    fullscreen_btn.bind("<Button-1>", lambda event: funel_exit())
+def exits(): sys.exit()
+def mins():
+    root.overrideredirect(False)
+    root.iconify()
+topbar.pack(side=TOP, fill='x', pady=2, padx=2)
+a_frame = Frame(bg='black', bd=0, height=1)
+a_frame.pack(side=TOP, fill='x')
+def font_sel():
+    messagebox.showerror("Feature coming soon!", "This feature is not implemented yet. Please send help to a crying programer trying to get his code to work.")
+open_btn = CTkButton(
+    topbar, text="Open", text_font=('Helvetica', font_size),
+    fg_color=bg, text_color=fg, hover_color=bg, command=open_file, border_width=1, border_color=black,
+)
+open_btn.pack(side=LEFT, pady=3, padx=3)
+save_btn = CTkButton(
+    topbar, text="Save", text_font=('Helvetica', font_size),
+    fg_color=bg, text_color=fg, hover_color=bg, command=save_file, border_width=1, border_color=black,
+)
+save_btn.pack(side=LEFT, pady=3, padx=3)
+files_label = Label(topbar, text=filenamee, bg=top_bg, fg=top_fg, font=('Helvetica', font_size))
+files_label.place(relx=0.5, rely=0.5, anchor=CENTER)
+exit_img = PhotoImage(file="Images/exit.png")
+exit_btn = Label(
+    topbar, image=exit_img, bg=bg, fg=fg, bd=0, highlightthickness=0
+)
+exit_btn.pack(side=RIGHT, pady=3, padx=3)
+exit_btn.bind("<Button-1>", lambda event: exits())
+fullscreen_img = PhotoImage(file="Images/fullscreen.png")
+fullscreen_btn = Label(
+    topbar, image=fullscreen_img, bg=bg, fg=fg, bd=0, highlightthickness=0
+)
+fullscreen_btn.pack(side=RIGHT, pady=3, padx=3)
+fullscreen_btn.bind("<Button-1>", lambda event: funel())
+minimize_img = PhotoImage(file="Images/minimize.png")
+minimize_btn = Label(
+    topbar, image=minimize_img, bg=bg, fg=fg, bd=0, highlightthickness=0
+)
+minimize_btn.pack(side=RIGHT, pady=3, padx=3)
+minimize_btn.bind("<Button-1>", lambda event: mins())
+fonts_btn = CTkButton(
+    topbar, text="Fonts", text_font=('Helvetica', font_size),
+    fg_color=bg, text_color=fg, hover_color=bg, command=font_sel, border_width=1, border_color=black,
+)
+fonts_btn.pack(side=RIGHT, pady=3, padx=3)
+menu_btn = CTkButton(
+    topbar, text="Menu", text_font=('Helvetica', font_size),
+    fg_color=bg, text_color=fg, hover_color=bg, command=menu_sel, border_width=1, border_color=black,
+)
+menu_btn.pack(side=RIGHT, pady=3, padx=3)
 def theme_set(theme):
     code_editor.config(highlighter=theme)
     if theme == "dracula":
@@ -234,11 +309,11 @@ def asktheme():
     theme_window.title("Theme Selector")
     if platform.system() == "Linux":
         tentry = CTkEntry(master=theme_window, placeholder_text="Search for a pygments highlighter theme?", text_font=("Arial", 14))
-        tentry.pack(fill='x', pady=10, padx=10)
+        tentry.pack(fill='x', pady=9, padx=9)
         theme_window.geometry("440x75")
     else:
         tentry = ttk.Entry(master=theme_window, font=("Arial", 14))
-        tentry.pack(fill='x', pady=10, padx=10)
+        tentry.pack(fill='x', pady=9, padx=9)
         theme_window.geometry("400x75")
     theme_window.resizable(False, False)
 def lang_set(langs, flang):
@@ -299,15 +374,15 @@ def search():
     search_window.title("Syntax Language Selector")
     if platform.system() == "Linux":
         search_entry = CTkEntry(master=search_window, placeholder_text="Search for a language, eg: python", text_font=("Arial", 14))
-        search_entry.pack(fill='x', pady=10, padx=10)
-        search_window.geometry("440x100")
+        search_entry.pack(fill='x', pady=9, padx=9)
+        search_window.geometry("440x90")
     else:
         search_entry = ttk.Entry(master=search_window, font=("Arial", 14))
-        search_entry.pack(fill='x', pady=10, padx=10)
-        search_window.geometry("400x100")
+        search_entry.pack(fill='x', pady=9, padx=9)
+        search_window.geometry("400x90")
     search_window.resizable(False, False)
     search_frame = Frame(search_window)
-    search_frame.pack(fill='x', pady=10, padx=10)
+    search_frame.pack(fill='x', pady=9, padx=9)
     python_btn = ttk.Button(search_frame, text="Python", command=lambda: lang_set("python", "Python"))
     python_btn.grid(row=0, column=0)
     javascript_btn = ttk.Button(search_frame, text="JS", command=lambda: lang_set("javascript", "JavaScript"))
@@ -341,39 +416,22 @@ def fun_terminal():
     xterm.insert(1.0, 'This is not a proper terminal. Inputs and TUI will not work')
     xterm.config(state=DISABLED)
     xterm.pack(anchor='w', fill='both', expand=1, pady=1, padx=1)
-lang_menu = Menu(menubar)
-lang_menu.add_command(label="Language Syntax Search", command=lambda: search())
-lang_menu.add_command(label="Terminal (OFF)", command=lambda: terminal.pack_forget())
-lang_menu.add_command(label="Terminal (ON)", command=lambda: terminal.pack(fill='both', side=BOTTOM, pady=7, padx=7))
-def write():
-    print("URMOM")
-theme_menu = Menu(menubar)
-theme_menu.add_command(label="Monokai", command=lambda: theme_set("monokai"))
-theme_menu.add_command(label="Dracula", command=lambda: theme_set("dracula"))
-theme_menu.add_separator()
-theme_menu.add_command(label="Consolas", command=lambda: change_font("Consolas"))
-theme_menu.add_command(label="JetBrains Mono", command=lambda: change_font("JetBrains Mono"))
-theme_menu.add_command(label="Source Code", command=lambda: change_font("Source Code"))
-theme_menu.add_command(label="Firacode", command=lambda: change_font("Firacode"))
-theme_menu.add_command(label="Monospace", command=lambda: change_font("Monospace"))
 def change_font(fonts):
     global font_family
     font_family = fonts
     code_editor.config(font=(font_family, font_size))
     font_label.config(text=f"{font_family} {font_size}")
-menubar.add_cascade(menu=file_menu, label="File")
-menubar.add_cascade(menu=help_menu, label="Help")
-menubar.add_cascade(menu=lang_menu, label="Configure")
-menubar.add_cascade(menu=theme_menu, label="Themes/Fonts")
+sg = ttk.Sizegrip(root)
+sg.pack(side=RIGHT, anchor=SE)
 bottom_bar = Frame(root, bg=white, bd=0, highlightthickness=0)
 bottom_bar.pack(side=BOTTOM, fill='x')
-file_lab = Label(bottom_bar, font=("Arial", 10), text=filenamee, bg=white)
+file_lab = Label(bottom_bar, font=("Arial", 9), text=filenamee, bg=white)
 file_lab.grid(row=0, column=0)
-lang_lab = Label(bottom_bar, font=("Arial", 10), text=langs, bg='lightgrey')
+lang_lab = Label(bottom_bar, font=("Arial", 9), text=langs, bg='lightgrey')
 lang_lab.grid(row=0, column=1)
-font_label = Label(bottom_bar, font=("Arial", 10), text=f"{font_family} Size: {font_size} Terminal {fs}", bg=white)
+font_label = Label(bottom_bar, font=("Arial", 9), text=f"{font_family} Size: {font_size} Terminal {fs}", bg=white)
 font_label.grid(row=0, column=2)
-code_frame.pack(fill="both", expand=True, pady=10, padx=10)
+code_frame.pack(fill="both", expand=True, pady=9, padx=9)
 code_editor.pack(fill="both", expand=True, pady=1, padx=1)
 def increase():
     global font_size, fs
@@ -404,8 +462,7 @@ else: code_editor.bind("<Control-=>", lambda event: increase())
 code_editor.bind("<Control-minus>", lambda event: decrease())
 code_editor.bind("<Return>", lambda event: retrurns())
 #code_editor.bind("<alt>", lambda event: menu_sel())
-fun_terminal()
-root.update()
-root.mainloop()
-
-# THIS PROJECT WAS BUILT USING IJPC
+if __name__ == "__main__":
+    fun_terminal()
+    root.update()
+    root.mainloop()
