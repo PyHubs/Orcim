@@ -407,4 +407,5 @@ code_editor.bind("<Return>", lambda event: retrurns())
 fun_terminal()
 root.update()
 root.mainloop()
-\
+
+# THIS PROJECT WAS BUILT USING IJPC
